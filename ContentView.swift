@@ -1,97 +1,153 @@
+//
+//  ContentView.swift
+//  Edutainment
+//
+//  Created by Ariel David Suarez on 5/6/23.
+//
+
+/*
+ * This Project is Based on the Challenge from Hacking with SwiftUI - Milestone: Projects 4-6 (Day 35)
+ */
 
 import SwiftUI
 
 struct ContentView: View {
+    @State private var multiplier = 0
+    @State private var multiplicant = Int.random(in: 0...12)
     
-    @ObservedObject var viewModel: EmojiMemoryGame
-    var theme: Theme
+    @State private var product = 0
+    @State private var productTitle = ""
     
+    @State private var answer = ""
+    @State private var showingAnswer = false
     
+    @State private var numberOfQuestions = 5
+    @State private var remainingQuestions = 5
+    
+    @State private var score = 0
+    
+    @State private var hasStarted: Bool = false
     
     var body: some View {
-        let cards = viewModel.cards
-        
-        let color: Color = EmojiMemoryGame.chosenColorOfTheme()
-        
-        let crimson = Color(red: 0.863, green: 0.078, blue: 0.235)
-        
         VStack {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 75))]) {
-                    ForEach(cards) { card in
-                        CardView(card: card)
-                            .aspectRatio(2/3, contentMode: .fit)
-                            .onTapGesture {
-                                viewModel.choose(card)
-                            }
+            Stepper(value: $numberOfQuestions, in: 5...20, step: 5) {
+                Text("\(numberOfQuestions) questions.")
+                    .foregroundColor(.red)
+                    .font(Font.largeTitle.weight(.bold))
+                
+            }
+            .padding()
+            
+            Text("Remaining Questions: \(remainingQuestions)")
+                .foregroundColor(.red)
+                .font(.largeTitle)
+
+            Button {
+                remainingQuestions = numberOfQuestions
+                hasStarted = true
+            } label: {
+                Text("Start")
+            }
+            .alert("Start!", isPresented: $hasStarted) {
+                Button("OK", action:{})
+            }
+            .padding()
+            .background(.white)
+            
+            Spacer()
+            VStack {
+                VStack {
+                    Text("Choose Multiplication Table:")
+                        .multilineTextAlignment(.center)
+                    Stepper(value: $multiplier, in: 0...12) {
+                        Text("Multiplication table: \(multiplier)")
+                            .font(.title)
                     }
-                    
-                        
+                    .padding(.horizontal, 30)
+                }
+                .font(.largeTitle.weight(Font.Weight.bold))
+                
+                Section {
+                    Text("Multiplicant: \(multiplicant)")
+                }
+                .font(.largeTitle.weight(Font.Weight.bold))
+                .multilineTextAlignment(.leading)
+                
+                HStack {
+                    Text("Product:")
+                    TextField("Product:", value: $product, format: .number)
+                }
+                .padding(.horizontal, 30)
+                .font(.largeTitle.weight(.bold))
+            }
+            .multilineTextAlignment(.leading)
+            .padding(.vertical)
+            .background(.regularMaterial)
+            
+            
+            Spacer()
+            
+            Button {
+                checkAnswer()
+            } label: {
+                ZStack {
+                    Text("Done")
+                }
+                .frame(width: 1000, height: 100)
+                .foregroundColor(.white)
+                .background(Color(red: 0.75, green: 0.2, blue: 0.35))
+                .border(.gray)
+            }
+            .alert(productTitle, isPresented: $showingAnswer) {
+                if  remainingQuestions > 1 {
+                    Button("Next!", action: {
+                        tryAgain()
+                        remainingQuestions -= 1
+                    })
+                } else {
+                    HStack {
+                        //Text("\(productTitle)")
+                        Button("Start Again?", action: {
+                            restart()
+                        })
+                    }
                 }
             }
-            .foregroundColor(color) // MARK: Color displayed by cards
             .padding()
         }
+        .background(Color(red: 0, green: 0.95, blue: 0.95))
+        
     }
     
+    func adjustNumberOfRemainingQuestions() {
+        remainingQuestions = numberOfQuestions
+    }
     
-    
-    // MARK: Button that initiates reset() fuction to reset game
-//    var reset: some View {
-//        Button( action: {
-//            // MARK: function to reset game needed
-//            EmojiMemoryGame.resetMemoryGame()
-//        }, label: {
-//            VStack {
-//                Image(systemName: "arrowshape.turn.up.left.cicle")
-//                Text("Reset")
-//            }
-//
-//        })
-//    }
-    
-}
-
-struct CardView: View {
-    let card: MemoryGame<String>.Card
-    
-    let shape = RoundedRectangle(cornerRadius: 10)
-    
-    var body: some View {
-        ZStack {
-            //let shape = RoundedRectangle(cornerRadius: 10)
-            
-            if card.isFaceUp {
-                faceUpCard
-            }
-            else if card.isMatched {
-                faceUpCard.opacity(0.35)
-                //shape.opacity(0.5)
+    func checkAnswer() {
+            if multiplier * multiplicant == product {
+                score += 1
+                productTitle = "Correct! Score: \(score)."
             }
             else {
-                shape.fill()
+                productTitle = "Wrong! The Answer is \(multiplier * multiplicant)!"
             }
-        }
+        
+        showingAnswer = true
     }
     
-    var faceUpCard: some View {
-        ZStack {
-            shape.fill().foregroundColor(.white)
-            shape.strokeBorder(lineWidth: 3)
-            Text(card.content).font(.largeTitle)
-        }
+    func tryAgain() {
+        multiplier = 0
+        multiplicant = Int.random(in: 0...9)
+    }
+    
+    func restart() {
+        remainingQuestions = numberOfQuestions
+        hasStarted = false
     }
 }
-
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        let game = EmojiMemoryGame()
-        let viewTheme = EmojiMemoryGame.randomTheme
-        
-        ContentView(viewModel: game, theme: viewTheme)
-            .preferredColorScheme(.dark)
-        ContentView(viewModel: game, theme: viewTheme)
-            .preferredColorScheme(.light)
+        ContentView().preferredColorScheme(.dark)
     }
 }
