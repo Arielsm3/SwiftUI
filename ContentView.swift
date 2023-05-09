@@ -1,153 +1,149 @@
 //
 //  ContentView.swift
-//  Edutainment
-//
-//  Created by Ariel David Suarez on 5/6/23.
+//  StackingUpButtons
 //
 
 /*
- * This Project is Based on the Challenge from Hacking with SwiftUI - Milestone: Projects 4-6 (Day 35)
+ * Based on the Hacking with Swift project GuessTheFlag by Paul Hudson
+ * with some minor modifications.
  */
 
 import SwiftUI
 
 struct ContentView: View {
-    @State private var multiplier = 0
-    @State private var multiplicant = Int.random(in: 0...12)
-    
-    @State private var product = 0
-    @State private var productTitle = ""
-    
-    @State private var answer = ""
-    @State private var showingAnswer = false
-    
-    @State private var numberOfQuestions = 5
-    @State private var remainingQuestions = 5
-    
+    @State private var showingScore = false
+    @State private var scoreTitle = ""
     @State private var score = 0
     
-    @State private var hasStarted: Bool = false
+    @State private var finalScoreTitle: String = ""
+    @State private var showingFinalScore: Bool = false
     
+    @State private var countries = ["Russia", "Nigeria", "Poland", "Spain", "Estonia", "France", "Germany", "Ireland", "Italy", "UK", "US"].shuffled()
+    @State private var correctAnswer = Int.random(in: 0...2)
+        
     var body: some View {
-        VStack {
-            Stepper(value: $numberOfQuestions, in: 5...20, step: 5) {
-                Text("\(numberOfQuestions) questions.")
-                    .foregroundColor(.red)
-                    .font(Font.largeTitle.weight(.bold))
+        ZStack {
+            LinearGradient(stops: [
+                .init(color: .yellow, location: 0.5),
+                .init(color: .black, location: 0.5),
+            ], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .ignoresSafeArea()
+            
+            VStack(spacing: 15) {
+                Spacer()
+                Text("Guess The Flag")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.white)
                 
-            }
-            .padding()
-            
-            Text("Remaining Questions: \(remainingQuestions)")
-                .foregroundColor(.red)
-                .font(.largeTitle)
-
-            Button {
-                remainingQuestions = numberOfQuestions
-                hasStarted = true
-            } label: {
-                Text("Start")
-            }
-            .alert("Start!", isPresented: $hasStarted) {
-                Button("OK", action:{})
-            }
-            .padding()
-            .background(.white)
-            
-            Spacer()
-            VStack {
-                VStack {
-                    Text("Choose Multiplication Table:")
-                        .multilineTextAlignment(.center)
-                    Stepper(value: $multiplier, in: 0...12) {
-                        Text("Multiplication table: \(multiplier)")
-                            .font(.title)
+                VStack(spacing: 15) {
+                    VStack {
+                        Text("Tap the flag of:")
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundColor(.primary)
+                        
+                        Text(countries[correctAnswer])
+                            .font(.largeTitle.weight(.semibold))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.horizontal, 30)
-                }
-                .font(.largeTitle.weight(Font.Weight.bold))
-                
-                Section {
-                    Text("Multiplicant: \(multiplicant)")
-                }
-                .font(.largeTitle.weight(Font.Weight.bold))
-                .multilineTextAlignment(.leading)
-                
-                HStack {
-                    Text("Product:")
-                    TextField("Product:", value: $product, format: .number)
-                }
-                .padding(.horizontal, 30)
-                .font(.largeTitle.weight(.bold))
-            }
-            .multilineTextAlignment(.leading)
-            .padding(.vertical)
-            .background(.regularMaterial)
-            
-            
-            Spacer()
-            
-            Button {
-                checkAnswer()
-            } label: {
-                ZStack {
-                    Text("Done")
-                }
-                .frame(width: 1000, height: 100)
-                .foregroundColor(.white)
-                .background(Color(red: 0.75, green: 0.2, blue: 0.35))
-                .border(.gray)
-            }
-            .alert(productTitle, isPresented: $showingAnswer) {
-                if  remainingQuestions > 1 {
-                    Button("Next!", action: {
-                        tryAgain()
-                        remainingQuestions -= 1
-                    })
-                } else {
+                    .padding()
+                    ScrollView {
+                        ForEach(0..<3) { number in
+                            Button {
+                                flagTapped(number)
+                                
+                            } label: {
+                                FlagImage(countries: countries, number: number)
+                                    .clipShape(Capsule())
+                                    .shadow(radius: 5)
+                            }
+                        }
+                    }
+                    .padding()
+                    
                     HStack {
-                        //Text("\(productTitle)")
-                        Button("Start Again?", action: {
-                            restart()
+                        Button("Reshuffle", action: {
+                            reshuffle()
                         })
+                        Button("New Game", action: {
+                            newGame()
+                        })
+                        .foregroundColor(.red)
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .background(.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                
+                Spacer()
+                Spacer()
+                Text("Score: \(score)") // "Score ???"
+                    .foregroundColor(.white)
+                    .font(.title.bold())
+                Spacer()
             }
             .padding()
         }
-        .background(Color(red: 0, green: 0.95, blue: 0.95))
+        .alert(scoreTitle, isPresented: $showingScore) {
+            Button("Continue", action: askQuestion)
+        } message: {
+            Text("Your score is \(score)")
+        }
+        .alert(finalScoreTitle, isPresented: $showingFinalScore) {
+            Button("New Game", action: newGame)
+        }
         
     }
-    
-    func adjustNumberOfRemainingQuestions() {
-        remainingQuestions = numberOfQuestions
-    }
-    
-    func checkAnswer() {
-            if multiplier * multiplicant == product {
+       
+    func flagTapped(_ number: Int) {
+        if score < 8 { // Score: 8 will be reached right after it marks 7
+            if number == correctAnswer {
+                scoreTitle = "Correct"
                 score += 1
-                productTitle = "Correct! Score: \(score)."
             }
             else {
-                productTitle = "Wrong! The Answer is \(multiplier * multiplicant)!"
+                scoreTitle = "Wrong! That's the flag of \(countries[number])"
+                score -= 1
             }
-        
-        showingAnswer = true
+            
+            showingScore = true
+        }
+        else {
+            showingFinalScore = true
+            finalScoreTitle = "Congratulations! Your score is \(score)"
+        }
     }
     
-    func tryAgain() {
-        multiplier = 0
-        multiplicant = Int.random(in: 0...9)
+    func askQuestion() {
+        countries.shuffle()
+        correctAnswer = Int.random(in: 0...2)
     }
     
-    func restart() {
-        remainingQuestions = numberOfQuestions
-        hasStarted = false
+    func reshuffle() {
+        countries.shuffle()
+        if !countries.contains(correctAnswer.description) {
+            countries.shuffle()
+        }
+    }
+    
+    func newGame() {
+        score = 0 // Reset score to 0
+        countries.shuffle()
+    }
+    
+}
+
+struct FlagImage: View {
+    var countries: Array<String>
+    var number: Int
+    
+    var body: some View {
+        Image(countries[number])
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().preferredColorScheme(.dark)
+        ContentView()
     }
 }
